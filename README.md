@@ -21,6 +21,6 @@ Final-Year B.Tech Aeronautical Engineering Student
 - SGPA Calculator
 
 ### Contact
-- Email: cetan.patil.ae@gmail.com
+- Email: chetan.patil.ae@gmail.com
 - LinkedIn: linkedin.com/in/chetan-patil-211669280
 - GitHub: github.com/chetan-patil-ae
