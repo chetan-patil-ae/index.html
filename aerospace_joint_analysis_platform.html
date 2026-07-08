@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0c10;--bg2:#111318;--bg3:#181b22;--bg4:#1e2028;
+    --border:#2a2d38;--border2:#3a3d4a;
+    --text:#e8eaf0;--text2:#9aa0b4;--text3:#6b7280;
+    --accent:#4f7cff;--accent2:#3d63d4;
+    --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+    --green-dim:#16a34a22;--yellow-dim:#f59e0b22;--red-dim:#ef444422;
+    --accent-dim:#4f7cff18;
+    --mono:'JetBrains Mono',monospace;
+    --sans:'Syne',sans-serif;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+  .app{display:grid;grid-template-columns:320px 1fr;min-height:100vh}
+  .sidebar{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+  .main{display:flex;flex-direction:column;overflow:hidden}
+  .sidebar-header{padding:20px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .logo-icon{width:32px;height:32px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center}
+  .logo-icon svg{width:18px;height:18px}
+  .logo-text{font-size:15px;font-weight:700;letter-spacing:.5px}
+  .logo-sub{font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-left:42px}
+  .section{padding:16px;border-bottom:1px solid var(--border)}
+  .section-title{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;font-weight:600}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+  .field input,.field select{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-family:var(--mono);font-size:12px;outline:none;transition:border .2s}
+  .field input:focus,.field select:focus{border-color:var(--accent)}
+  .field input[type=number]{-moz-appearance:textfield}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .plate-row{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:6px;position:relative}
+  .plate-label{font-size:10px;color:var(--accent);font-family:var(--mono);margin-bottom:6px;font-weight:500}
+  .plate-remove{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1}
+  .plate-remove:hover{color:var(--red)}
+  .btn{padding:8px 14px;border-radius:6px;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;transition:all .15s}
+  .btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent2)}
+  .btn-full{width:100%;padding:10px;font-size:13px}
+  .btn-add{width:100%;margin-top:4px}
+  .edge-opts{display:flex;gap:6px}
+  .edge-opt{flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:11px;text-align:center;transition:all .15s;font-family:var(--sans)}
+  .edge-opt.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+  .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+  .tab{padding:14px 20px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.3px}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab:hover{color:var(--text)}
+  .tab-content{flex:1;overflow-y:auto;padding:20px}
+  .dashboard-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .kpi-label{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+  .kpi-value{font-size:22px;font-weight:700;font-family:var(--mono)}
+  .kpi-sub{font-size:10px;color:var(--text3);margin-top:2px}
+  .kpi.pass .kpi-value{color:var(--green)}
+  .kpi.warn .kpi-value{color:var(--yellow)}
+  .kpi.fail .kpi-value{color:var(--red)}
+  .results-table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  .results-table th{text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border)}
+  .results-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px}
+  .results-table tr:last-child td{border-bottom:none}
+  .results-table tr.critical{background:var(--red-dim)}
+  .results-table tr.warn-row{background:var(--yellow-dim)}
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:.5px}
+  .badge.pass{background:var(--green-dim);color:var(--green)}
+  .badge.fail{background:var(--red-dim);color:var(--red)}
+  .badge.warn{background:var(--yellow-dim);color:var(--yellow)}
+  .badge.critical-badge{background:var(--red-dim);color:var(--red);margin-left:6px}
+  .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+  .chart-title{font-size:11px;color:var(--text2);letter-spacing:.5px;margin-bottom:14px;font-weight:600}
+  .ai-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+  .ai-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .ai-badge{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.5px}
+  .ai-content{font-size:13px;line-height:1.7;color:var(--text2)}
+  .ai-content strong{color:var(--text)}
+  .ai-content .highlight{background:var(--accent-dim);border-left:2px solid var(--accent);padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px}
+  .ai-content .warn-box{background:var(--yellow-dim);border-left:2px solid var(--yellow);padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px;color:var(--yellow)}
+  .ai-content .fail-box{background:var(--red-dim);border-left:2px solid var(--red);padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px;color:var(--red)}
+  .loading{display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px;padding:20px}
+  .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .schematic{display:flex;align-items:center;justify-content:center;padding:20px}
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;color:var(--text3);padding:40px}
+  .empty-icon{font-size:48px;margin-bottom:16px;opacity:.3}
+  .empty-title{font-size:16px;font-weight:600;color:var(--text2);margin-bottom:8px}
+  .empty-sub{font-size:12px;line-height:1.6;max-width:280px}
+  .analyze-btn-wrap{padding:16px;border-top:1px solid var(--border);flex-shrink:0}
+  .mos-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:4px}
+  .mos-fill{height:100%;border-radius:3px;transition:width .5s}
+  .section-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+  .section-card h3{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;letter-spacing:.3px}
+  .prop-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)}
+  .prop-row:last-child{border-bottom:none}
+  .prop-key{font-size:11px;color:var(--text3)}
+  .prop-val{font-size:11px;font-family:var(--mono);color:var(--text)}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.5">
+            <circle cx="9" cy="9" r="3"/>
+            <line x1="9" y1="1" x2="9" y2="5"/>
+            <line x1="9" y1="13" x2="9" y2="17"/>
+            <line x1="1" y1="9" x2="5" y2="9"/>
+            <line x1="13" y1="9" x2="17" y2="9"/>
+            <rect x="3" y="3" width="12" height="12" rx="2" stroke-width=".8"/>
+          </svg>
+        </div>
+        <span class="logo-text">JointSense</span>
+      </div>
+      <div class="logo-sub">Structural Joint Analysis · CAE</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Bolt Configuration</div>
+      <div class="field">
+        <label>Bolt Diameter (mm)</label>
+        <input type="number" id="boltDiam" value="6.35" step="0.1" min="1">
+      </div>
+      <div class="field">
+        <label>Material</label>
+        <select id="boltMat">
+          <option value="titanium_6al4v">Ti-6Al-4V (Grade 5)</option>
+          <option value="steel_a286">Steel A-286 (Aerospace)</option>
+          <option value="steel_4340">Steel 4340 (HT)</option>
+          <option value="al2024_t4">Aluminum 2024-T4 (Pin)</option>
+          <option value="inconel718">Inconel 718</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Plates</div>
+      <div id="plateList"></div>
+      <button class="btn btn-ghost btn-add btn-full" onclick="addPlate()">+ Add Plate</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Edge Distance</div>
+      <div class="field">
+        <div class="edge-opts">
+          <button class="edge-opt active" onclick="setEdge('1.5d',this)">1.5D</button>
+          <button class="edge-opt" onclick="setEdge('2d',this)">2.0D</button>
+          <button class="edge-opt" onclick="setEdge('custom',this)">Custom</button>
+        </div>
+      </div>
+      <div class="field" id="customEdgeWrap" style="display:none">
+        <label>Custom Edge Distance (mm)</label>
+        <input type="number" id="customEdge" value="10" step="0.5">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Applied Loads</div>
+      <div class="field">
+        <label>Axial Load Fx (N)</label>
+        <input type="number" id="loadFx" value="2000" step="100">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Shear Fy (N)</label>
+          <input type="number" id="loadFy" value="3000" step="100">
+        </div>
+        <div class="field">
+          <label>Shear Fz (N)</label>
+          <input type="number" id="loadFz" value="1000" step="100">
+        </div>
+      </div>
+      <div class="field">
+        <label>Prying Model</label>
+        <select id="pryingModel">
+          <option value="0.75">Default (0.75×Fx)</option>
+          <option value="1.0">Conservative (1.0×Fx)</option>
+          <option value="0.5">Optimistic (0.5×Fx)</option>
+          <option value="custom">User-defined</option>
+        </select>
+      </div>
+      <div class="field" id="pryingCustomWrap" style="display:none">
+        <label>Prying Factor</label>
+        <input type="number" id="pryingFactor" value="0.75" step="0.05" min="0" max="2">
+      </div>
+    </div>
+
+    <div class="analyze-btn-wrap">
+      <button class="btn btn-primary btn-full" onclick="runAnalysis()">Run Analysis ↗</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('dashboard',this)">Dashboard</div>
+      <div class="tab" onclick="showTab('details',this)">Failure Modes</div>
+      <div class="tab" onclick="showTab('viz',this)">Visualization</div>
+      <div class="tab" onclick="showTab('ai',this)">CAE Assistant</div>
+    </div>
+    <div class="tab-content" id="tabContent">
+      <div class="empty-state">
+        <div class="empty-icon">⬡</div>
+        <div class="empty-title">No Analysis Run Yet</div>
+        <div class="empty-sub">Configure your joint parameters in the sidebar and click <strong>Run Analysis</strong> to get started.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const MATERIALS = {
+  al2024_t3:{name:'Al 2024-T3',Ftu:483,Fty:345,Fsu:290,Fbru:896,Fbry:634,E:73.1,nu:.33,rho:2.78,color:'#4f7cff'},
+  al7075_t6:{name:'Al 7075-T6',Ftu:572,Fty:503,Fsu:331,Fbru:1034,Fbry:827,E:71.7,nu:.33,rho:2.81,color:'#22c55e'},
+  al6061_t6:{name:'Al 6061-T6',Ftu:310,Fty:276,Fsu:207,Fbru:572,Fbry:448,E:68.9,nu:.33,rho:2.70,color:'#86efac'},
+  titanium_6al4v:{name:'Ti-6Al-4V',Ftu:950,Fty:880,Fsu:620,Fbru:1654,Fbry:1378,E:113.8,nu:.34,rho:4.43,color:'#a78bfa'},
+  steel_a286:{name:'A-286 Steel',Ftu:1000,Fty:793,Fsu:621,Fbru:1792,Fbry:1378,E:197,nu:.31,rho:7.94,color:'#f59e0b'},
+  steel_4340:{name:'4340 Steel HT',Ftu:1379,Fty:1241,Fsu:827,Fbru:2068,Fbry:1792,E:200,nu:.29,rho:7.85,color:'#f97316'},
+  al2024_t4:{name:'Al 2024-T4',Ftu:469,Fty:324,Fsu:283,Fbru:862,Fbry:607,E:73.1,nu:.33,rho:2.78,color:'#06b6d4'},
+  inconel718:{name:'Inconel 718',Ftu:1379,Fty:1172,Fsu:827,Fbru:2413,Fbry:2068,E:200,nu:.29,rho:8.22,color:'#ec4899'}
+};
+
+const PLATE_MATERIALS_ORDER=['al2024_t3','al7075_t6','al6061_t6','titanium_6al4v','steel_a286','steel_4340','inconel718'];
+
+let plates=[
+  {id:1,width:25.4,thickness:3.175,matKey:'al2024_t3'},
+  {id:2,width:25.4,thickness:3.175,matKey:'al7075_t6'}
+];
+let plateCounter=3;
+let edgeMode='1.5d';
+let analysisResult=null;
+let activeTab='dashboard';
+let charts={};
+
+function getEdgeDistance(d){
+  if(edgeMode==='1.5d') return 1.5*d;
+  if(edgeMode==='2d') return 2*d;
+  return parseFloat(document.getElementById('customEdge').value)||10;
+}
+
+function setEdge(mode,btn){
+  edgeMode=mode;
+  document.querySelectorAll('.edge-opt').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('customEdgeWrap').style.display=mode==='custom'?'block':'none';
+}
+
+function addPlate(){
+  plates.push({id:plateCounter++,width:25.4,thickness:3.175,matKey:'al2024_t3'});
+  renderPlates();
+}
+
+function removePlate(id){
+  if(plates.length<=1){alert('At least one plate required.');return;}
+  plates=plates.filter(p=>p.id!==id);
+  renderPlates();
+}
+
+function renderPlates(){
+  const container=document.getElementById('plateList');
+  container.innerHTML='';
+  plates.forEach((p,i)=>{
+    const div=document.createElement('div');
+    div.className='plate-row';
+    div.innerHTML=`
+      <div class="plate-label">Plate ${i+1}</div>
+      <button class="plate-remove" onclick="removePlate(${p.id})">✕</button>
+      <div class="row2">
+        <div class="field">
+          <label>Width (mm)</label>
+          <input type="number" value="${p.width}" step="0.5" onchange="updatePlate(${p.id},'width',this.value)">
+        </div>
+        <div class="field">
+          <label>Thickness (mm)</label>
+          <input type="number" value="${p.thickness}" step="0.1" onchange="updatePlate(${p.id},'thickness',this.value)">
+        </div>
+      </div>
+      <div class="field">
+        <label>Material</label>
+        <select onchange="updatePlate(${p.id},'matKey',this.value)">
+          ${PLATE_MATERIALS_ORDER.map(k=>`<option value="${k}"${k===p.matKey?' selected':''}>${MATERIALS[k].name}</option>`).join('')}
+        </select>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function updatePlate(id,field,val){
+  const p=plates.find(x=>x.id===id);
+  if(p) p[field]=field==='matKey'?val:parseFloat(val);
+}
+
+function getPryingFactor(){
+  const sel=document.getElementById('pryingModel').value;
+  if(sel==='custom') return parseFloat(document.getElementById('pryingFactor').value)||0.75;
+  return parseFloat(sel);
+}
+
+document.getElementById('pryingModel').onchange=function(){
+  document.getElementById('pryingCustomWrap').style.display=this.value==='custom'?'block':'none';
+};
+
+function runAnalysis(){
+  const d=parseFloat(document.getElementById('boltDiam').value);
+  const boltMatKey=document.getElementById('boltMat').value;
+  const boltMat=MATERIALS[boltMatKey];
+  const Fx=parseFloat(document.getElementById('loadFx').value)||0;
+  const Fy=parseFloat(document.getElementById('loadFy').value)||0;
+  const Fz=parseFloat(document.getElementById('loadFz').value)||0;
+  const Fshear=Math.sqrt(Fy*Fy+Fz*Fz);
+  const pf=getPryingFactor();
+  const Ftensile=Fx*(1+pf);
+  const edge=getEdgeDistance(d);
+  const nShearPlanes=plates.length-1||1;
+  const shearPerPlane=Fshear/nShearPlanes;
+  const boltArea=Math.PI*(d/2)**2;
+  const boltShearStress=shearPerPlane/boltArea;
+  const boltAllowShear=boltMat.Fsu;
+  const boltTensileStress=Ftensile/boltArea;
+  const boltAllowTensile=boltMat.Ftu;
+  const boltShearMoS=boltAllowShear/boltShearStress-1;
+  const boltTensileMoS=boltAllowTensile/boltTensileStress-1;
+  const R_s=boltShearStress/boltAllowShear;
+  const R_t=boltTensileStress/boltAllowTensile;
+  const interactionValue=R_s**2+R_t**2;
+  const boltInteractionMoS=1/Math.sqrt(interactionValue)-1;
+  const plateResults=plates.map((p,i)=>{
+    const mat=MATERIALS[p.matKey];
+    const bearingStress=Fshear/(d*p.thickness);
+    const netArea=(p.width-d)*p.thickness;
+    const netSectionStress=Fshear/netArea;
+    const shearArea=2*edge*p.thickness;
+    const shearOutStress=Fshear/shearArea;
+    const pullThruArea=Math.PI*d*p.thickness;
+    const pullThruStress=Fx/pullThruArea;
+    return{
+      id:p.id,index:i+1,
+      mat,matKey:p.matKey,width:p.width,thickness:p.thickness,
+      bearing:{stress:bearingStress,allow:mat.Fbru,MoS:mat.Fbru/bearingStress-1},
+      netSection:{stress:netSectionStress,allow:mat.Ftu,MoS:mat.Ftu/netSectionStress-1},
+      shearOut:{stress:shearOutStress,allow:mat.Fsu,MoS:mat.Fsu/shearOutStress-1},
+      pullThrough:{stress:pullThruStress,allow:mat.Ftu,MoS:mat.Ftu/pullThruStress-1}
+    };
+  });
+  const allMoS=[
+    {label:'Bolt Shear',MoS:boltShearMoS,plate:'Bolt'},
+    {label:'Bolt Tension',MoS:boltTensileMoS,plate:'Bolt'},
+    {label:'Interaction',MoS:boltInteractionMoS,plate:'Bolt'},
+    ...plateResults.flatMap(r=>[
+      {label:`P${r.index} Bearing`,MoS:r.bearing.MoS,plate:`Plate ${r.index}`},
+      {label:`P${r.index} Net Section`,MoS:r.netSection.MoS,plate:`Plate ${r.index}`},
+      {label:`P${r.index} Shear-Out`,MoS:r.shearOut.MoS,plate:`Plate ${r.index}`},
+      {label:`P${r.index} Pull-Through`,MoS:r.pullThrough.MoS,plate:`Plate ${r.index}`}
+    ])
+  ];
+  const criticalItem=allMoS.reduce((a,b)=>a.MoS<b.MoS?a:b);
+  const minMoS=Math.min(...allMoS.map(x=>x.MoS));
+  const pass=minMoS>0;
+  const gripLength=plates.reduce((s,p)=>s+p.thickness,0);
+  analysisResult={
+    d,boltMatKey,boltMat,Fx,Fy,Fz,Fshear,pf,Ftensile,edge,nShearPlanes,
+    boltShearStress,boltAllowShear,boltShearMoS,
+    boltTensileStress,boltAllowTensile,boltTensileMoS,
+    boltInteractionMoS,interactionValue,R_s,R_t,
+    plateResults,allMoS,criticalItem,minMoS,pass,gripLength
+  };
+  renderResults();
+}
+
+function mosClass(v){return v<0?'fail':v<0.2?'warn':'pass'}
+function mosColor(v){return v<0?'var(--red)':v<0.2?'var(--yellow)':'var(--green)'}
+function mosHex(v){return v<0?'#ef4444':v<0.2?'#f59e0b':'#22c55e'}
+function fmt(v,dec=1){return v.toFixed(dec)}
+
+function renderResults(){
+  if(!analysisResult) return;
+  renderTab(activeTab);
+}
+
+function showTab(tab,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  activeTab=tab;
+  if(analysisResult) renderTab(tab);
+}
+
+function renderTab(tab){
+  destroyCharts();
+  if(tab==='dashboard') renderDashboard();
+  else if(tab==='details') renderDetails();
+  else if(tab==='viz') renderViz();
+  else if(tab==='ai') renderAI();
+}
+
+function destroyCharts(){
+  Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});
+  charts={};
+}
+
+function renderDashboard(){
+  const r=analysisResult;
+  const tc=document.getElementById('tabContent');
+  tc.innerHTML=`
+    <div class="dashboard-grid">
+      <div class="kpi ${mosClass(r.minMoS)}">
+        <div class="kpi-label">Min Margin of Safety</div>
+        <div class="kpi-value">${fmt(r.minMoS,3)}</div>
+        <div class="kpi-sub">${r.pass?'PASS':'FAIL'} — ${r.criticalItem.label}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Bolt Shear MoS</div>
+        <div class="kpi-value" style="color:${mosColor(r.boltShearMoS)}">${fmt(r.boltShearMoS,3)}</div>
+        <div class="kpi-sub">${fmt(r.boltShearStress,1)} / ${fmt(r.boltAllowShear,1)} MPa</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Interaction MoS</div>
+        <div class="kpi-value" style="color:${mosColor(r.boltInteractionMoS)}">${fmt(r.boltInteractionMoS,3)}</div>
+        <div class="kpi-sub">Rs²+Rt² = ${fmt(r.interactionValue,3)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Grip Length</div>
+        <div class="kpi-value" style="color:var(--text)">${fmt(r.gripLength,2)}</div>
+        <div class="kpi-sub">mm — ${plates.length} plate(s)</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Margin of Safety — All Failure Modes</div>
+      <div style="position:relative;height:${Math.max(200,r.allMoS.length*36)}px">
+        <canvas id="mosChart" role="img" aria-label="Horizontal bar chart showing margin of safety for all failure modes"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Stress vs Allowable Comparison</div>
+      <div style="position:relative;height:260px">
+        <canvas id="stressChart" role="img" aria-label="Bar chart comparing applied stress vs allowable stress"></canvas>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    const labels=r.allMoS.map(x=>x.label);
+    const values=r.allMoS.map(x=>parseFloat(x.MoS.toFixed(3)));
+    const colors=values.map(v=>mosHex(v));
+    charts.mos=new Chart(document.getElementById('mosChart'),{
+      type:'bar',
+      data:{labels,datasets:[{label:'MoS',data:values,backgroundColor:colors.map(c=>c+'55'),borderColor:colors,borderWidth:1.5,borderRadius:3}]},
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`MoS: ${ctx.raw.toFixed(3)}`}}},
+        scales:{
+          x:{grid:{color:'#2a2d38'},ticks:{color:'#9aa0b4',font:{family:'JetBrains Mono',size:10}},min:Math.min(-0.5,...values)-0.1},
+          y:{grid:{color:'#1e2028'},ticks:{color:'#9aa0b4',font:{family:'JetBrains Mono',size:10}}}
+        }
+      }
+    });
+    const sLabels=['Bolt Shear','Bolt Tension','Interaction'];
+    const sApplied=[r.R_s,r.R_t,Math.sqrt(r.interactionValue)];
+    charts.stress=new Chart(document.getElementById('stressChart'),{
+      type:'bar',
+      data:{
+        labels:sLabels,
+        datasets:[
+          {label:'Load Ratio',data:sApplied,backgroundColor:'#4f7cff55',borderColor:'#4f7cff',borderWidth:1.5,borderRadius:3},
+          {label:'Limit (1.0)',data:[1,1,1],backgroundColor:'#ef444422',borderColor:'#ef4444',borderWidth:1.5,borderDash:[4,4],borderRadius:3,type:'bar'}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:'#2a2d38'},ticks:{color:'#9aa0b4',font:{family:'JetBrains Mono',size:10}}},
+          y:{grid:{color:'#2a2d38'},ticks:{color:'#9aa0b4',font:{family:'JetBrains Mono',size:10}},max:Math.max(1.5,...sApplied)+.1}
+        }
+      }
+    });
+  },50);
+}
+
+function renderDetails(){
+  const r=analysisResult;
+  let html=`
+    <div class="section-card">
+      <h3>Bolt Analysis — ${r.boltMat.name}</h3>
+      <table class="results-table">
+        <thead><tr><th>Failure Mode</th><th>Applied (MPa)</th><th>Allowable (MPa)</th><th>MoS</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr class="${mosClass(r.boltShearMoS)==='fail'?'critical':mosClass(r.boltShearMoS)==='warn'?'warn-row':''}">
+            <td>Shear</td><td>${fmt(r.boltShearStress)}</td><td>${fmt(r.boltAllowShear)}</td>
+            <td style="color:${mosColor(r.boltShearMoS)};font-weight:600">${fmt(r.boltShearMoS,3)}</td>
+            <td><span class="badge ${mosClass(r.boltShearMoS)}">${mosClass(r.boltShearMoS).toUpperCase()}</span></td>
+          </tr>
+          <tr class="${mosClass(r.boltTensileMoS)==='fail'?'critical':mosClass(r.boltTensileMoS)==='warn'?'warn-row':''}">
+            <td>Tension</td><td>${fmt(r.boltTensileStress)}</td><td>${fmt(r.boltAllowTensile)}</td>
+            <td style="color:${mosColor(r.boltTensileMoS)};font-weight:600">${fmt(r.boltTensileMoS,3)}</td>
+            <td><span class="badge ${mosClass(r.boltTensileMoS)}">${mosClass(r.boltTensileMoS).toUpperCase()}</span></td>
+          </tr>
+          <tr class="${mosClass(r.boltInteractionMoS)==='fail'?'critical':mosClass(r.boltInteractionMoS)==='warn'?'warn-row':''}">
+            <td>Interaction (Ms²+Mt²)^0.5</td><td>${fmt(Math.sqrt(r.interactionValue),3)}</td><td>1.000</td>
+            <td style="color:${mosColor(r.boltInteractionMoS)};font-weight:600">${fmt(r.boltInteractionMoS,3)}</td>
+            <td><span class="badge ${mosClass(r.boltInteractionMoS)}">${mosClass(r.boltInteractionMoS).toUpperCase()}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  r.plateResults.forEach(p=>{
+    const modes=[
+      {name:'Bearing',data:p.bearing},
+      {name:'Net Section',data:p.netSection},
+      {name:'Shear-Out',data:p.shearOut},
+      {name:'Pull-Through',data:p.pullThrough}
+    ];
+    html+=`<div class="section-card">
+      <h3>Plate ${p.index} — ${p.mat.name} | t=${fmt(p.thickness,2)}mm | w=${fmt(p.width,2)}mm</h3>
+      <table class="results-table">
+        <thead><tr><th>Failure Mode</th><th>Applied (MPa)</th><th>Allowable (MPa)</th><th>MoS</th><th>Status</th></tr></thead>
+        <tbody>
+          ${modes.map(m=>`<tr class="${mosClass(m.data.MoS)==='fail'?'critical':mosClass(m.data.MoS)==='warn'?'warn-row':''}">
+            <td>${m.name}</td><td>${fmt(m.data.stress)}</td><td>${fmt(m.data.allow)}</td>
+            <td style="color:${mosColor(m.data.MoS)};font-weight:600">${fmt(m.data.MoS,3)}</td>
+            <td><span class="badge ${mosClass(m.data.MoS)}">${mosClass(m.data.MoS).toUpperCase()}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  });
+  document.getElementById('tabContent').innerHTML=html;
+}
+
+function renderViz(){
+  const r=analysisResult;
+  const tc=document.getElementById('tabContent');
+  const nPlates=plates.length;
+  const totalH=plates.reduce((s,p)=>s+p.thickness*4,0);
+  const boltH=totalH+40;
+  const svgH=boltH+80;
+  const cx=200;
+  let py=30;
+  let platesHTML='';
+  plates.forEach((p,i)=>{
+    const ph=Math.max(20,p.thickness*4);
+    const mat=MATERIALS[p.matKey];
+    const col=mat.color||'#4f7cff';
+    platesHTML+=`<rect x="${cx-80}" y="${py}" width="160" height="${ph}" fill="${col}22" stroke="${col}" stroke-width="1.5" rx="2"/>
+    <text x="${cx-70}" y="${py+ph/2+5}" fill="${col}" font-size="10" font-family="JetBrains Mono">P${i+1}: ${mat.name.split(' ')[0]}</text>
+    <text x="${cx+60}" y="${py+ph/2+5}" fill="#9aa0b4" font-size="9" font-family="JetBrains Mono" text-anchor="end">${fmt(p.thickness,1)}mm</text>`;
+    py+=ph+2;
+  });
+  const boltColor=MATERIALS[r.boltMatKey]?.color||'#a78bfa';
+  tc.innerHTML=`
+    <div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-title">Joint Schematic — ${plates.length}-Plate Configuration</div>
+      <div class="schematic">
+        <svg width="400" height="${svgH+20}" viewBox="0 0 400 ${svgH+20}" xmlns="http://www.w3.org/2000/svg">
+          ${platesHTML}
+          <line x1="${cx}" y1="10" x2="${cx}" y2="${py+20}" stroke="${boltColor}" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="${cx}" cy="12" r="10" fill="${boltColor}" opacity=".9"/>
+          <circle cx="${cx}" cy="${py+18}" r="8" fill="${boltColor}" opacity=".7"/>
+          <line x1="${cx-120}" y1="${30+totalH/2}" x2="${cx-85}" y2="${30+totalH/2}" stroke="#4f7cff" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="${cx-125}" y="${30+totalH/2+4}" fill="#4f7cff" font-size="9" font-family="JetBrains Mono" text-anchor="end">Fy=${fmt(r.Fshear,0)}N</text>
+          <line x1="${cx+85}" y1="12" x2="${cx+120}" y2="12" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="${cx+125}" y="16" fill="#f59e0b" font-size="9" font-family="JetBrains Mono">Fx=${fmt(r.Fx,0)}N</text>
+          <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0L6,3L0,6Z" fill="#4f7cff"/></marker></defs>
+          <text x="200" y="${svgH}" fill="#6b7280" font-size="9" text-anchor="middle" font-family="JetBrains Mono">d=${fmt(r.d,2)}mm | e=${fmt(r.edge,2)}mm | grip=${fmt(r.gripLength,2)}mm</text>
+        </svg>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Plate Bearing Stress vs Allowable</div>
+      <div style="position:relative;height:220px">
+        <canvas id="plateChart" role="img" aria-label="Bar chart of plate bearing stresses vs allowable"></canvas>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    const pLabels=r.plateResults.map(p=>`P${p.index} ${p.mat.name.split(' ')[0]}`);
+    const applied=r.plateResults.map(p=>parseFloat(p.bearing.stress.toFixed(1)));
+    const allowable=r.plateResults.map(p=>parseFloat(p.bearing.allow.toFixed(1)));
+    charts.plate=new Chart(document.getElementById('plateChart'),{
+      type:'bar',
+      data:{
+        labels:pLabels,
+        datasets:[
+          {label:'Applied',data:applied,backgroundColor:'#4f7cff55',borderColor:'#4f7cff',borderWidth:1.5,borderRadius:3},
+          {label:'Allowable',data:allowable,backgroundColor:'#22c55e33',borderColor:'#22c55e',borderWidth:1.5,borderRadius:3}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:'#2a2d38'},ticks:{color:'#9aa0b4',font:{family:'JetBrains Mono',size:10}}},
+          y:{grid:{color:'#2a2d38'},ticks:{color:'#9aa0b4',font:{family:'JetBrains Mono',size:10}}}
+        }
+      }
+    });
+  },50);
+}
+
+function renderAI(){
+  const r=analysisResult;
+  const tc=document.getElementById('tabContent');
+  tc.innerHTML=`<div class="ai-panel"><div class="ai-header">
+    <div class="ai-badge">CAE AI</div><span style="font-size:13px;color:var(--text2)">Generating structural engineering analysis...</span>
+    </div><div class="loading"><div class="spinner"></div>Consulting AI assistant...</div></div>`;
+  const prompt=buildAIPrompt(r);
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      system:`You are a senior aerospace structural engineer and CAE specialist with 20+ years of experience in bolted joint analysis per MMPDS and MIL-HDBK-5. Analyze the structural joint data provided and give a professional, insightful engineering assessment. Format your response in clear paragraphs. Use specific numbers. Identify the critical failure mode, explain WHY it's critical, and provide concrete design recommendations. Keep it practical and technically precise. Do not use markdown headers or bullet points — use flowing paragraphs with clear transitions.`,
+      messages:[{role:'user',content:prompt}]
+    })
+  }).then(res=>res.json()).then(data=>{
+    const text=data.content?.map(b=>b.text||'').join('')||'Unable to generate analysis.';
+    const cls=r.pass?'pass':'fail';
+    const recs=extractRecommendations(r);
+    tc.innerHTML=`
+      <div class="ai-panel">
+        <div class="ai-header">
+          <div class="ai-badge">CAE AI</div>
+          <span style="font-size:13px;color:var(--text2)">Senior Structural Engineer Assessment</span>
+          <span class="badge ${cls}" style="margin-left:auto">${r.pass?'JOINT PASS':'JOINT FAIL'}</span>
+        </div>
+        <div class="ai-content">
+          ${formatAIText(text,r)}
+        </div>
+      </div>
+      <div class="section-card">
+        <h3>Design Recommendations</h3>
+        ${recs.map(rec=>`<div class="${rec.type}-box" style="margin-bottom:8px">${rec.text}</div>`).join('')}
+      </div>
+      <div class="section-card">
+        <h3>Material Properties Reference</h3>
+        ${plates.map((p,i)=>{const m=MATERIALS[p.matKey];return`<div class="prop-row"><span class="prop-key">Plate ${i+1} — ${m.name}</span><span class="prop-val">Ftu=${m.Ftu} | Fsu=${m.Fsu} | Fbru=${m.Fbru} MPa</span></div>`;}).join('')}
+        <div class="prop-row"><span class="prop-key">Bolt — ${r.boltMat.name}</span><span class="prop-val">Ftu=${r.boltMat.Ftu} | Fsu=${r.boltMat.Fsu} MPa</span></div>
+      </div>`;
+  }).catch(e=>{
+    tc.innerHTML=`<div class="ai-panel"><div class="ai-content"><p style="color:var(--red)">AI analysis unavailable. Please check your connection.</p><p style="margin-top:10px;color:var(--text2)">Error: ${e.message}</p></div></div>`;
+  });
+}
+
+function buildAIPrompt(r){
+  return `BOLTED JOINT ANALYSIS RESULTS — Please provide a professional structural engineering assessment.
+
+JOINT CONFIGURATION:
+- Bolt: d=${fmt(r.d,2)}mm, Material: ${r.boltMat.name} (Ftu=${r.boltMat.Ftu}MPa, Fsu=${r.boltMat.Fsu}MPa)
+- Plates: ${plates.length} plates, Grip Length: ${fmt(r.gripLength,2)}mm
+- Edge Distance: ${fmt(r.edge,2)}mm (${edgeMode})
+- Shear Planes: ${r.nShearPlanes}
+
+APPLIED LOADS:
+- Axial (Fx): ${fmt(r.Fx,0)}N | Resultant Shear: ${fmt(r.Fshear,1)}N | Prying Factor: ${r.pf}
+- Effective Tensile (with prying): ${fmt(r.Ftensile,1)}N
+
+BOLT ANALYSIS:
+- Shear Stress: ${fmt(r.boltShearStress,1)} / ${fmt(r.boltAllowShear,1)} MPa → MoS=${fmt(r.boltShearMoS,3)}
+- Tensile Stress: ${fmt(r.boltTensileStress,1)} / ${fmt(r.boltAllowTensile,1)} MPa → MoS=${fmt(r.boltTensileMoS,3)}
+- Interaction (Rs²+Rt²): ${fmt(r.interactionValue,4)} → MoS=${fmt(r.boltInteractionMoS,3)}
+
+PLATE RESULTS:
+${r.plateResults.map(p=>`Plate ${p.index} (${p.mat.name}, t=${fmt(p.thickness,2)}mm):
+  Bearing: ${fmt(p.bearing.stress,1)}/${fmt(p.bearing.allow,1)} MPa → MoS=${fmt(p.bearing.MoS,3)}
+  Net Section: ${fmt(p.netSection.stress,1)}/${fmt(p.netSection.allow,1)} MPa → MoS=${fmt(p.netSection.MoS,3)}
+  Shear-Out: ${fmt(p.shearOut.stress,1)}/${fmt(p.shearOut.allow,1)} MPa → MoS=${fmt(p.shearOut.MoS,3)}
+  Pull-Through: ${fmt(p.pullThrough.stress,1)}/${fmt(p.pullThrough.allow,1)} MPa → MoS=${fmt(p.pullThrough.MoS,3)}`).join('\n')}
+
+CRITICAL MODE: ${r.criticalItem.label} → Minimum MoS = ${fmt(r.minMoS,3)}
+OVERALL STATUS: ${r.pass?'PASS':'FAIL'}
+
+Please analyze this joint, explain the critical failure mode in engineering terms, discuss the load path and stress distribution, and provide specific design improvement recommendations with expected outcomes.`;
+}
+
+function formatAIText(text,r){
+  let html=text.replace(/\n\n/g,'</p><p style="margin-top:10px">').replace(/\n/g,' ');
+  if(r.minMoS<0) html=`<div class="fail-box">Joint FAILS on ${r.criticalItem.label} with MoS=${fmt(r.minMoS,3)}. Immediate redesign required.</div>`+html;
+  else if(r.minMoS<0.2) html=`<div class="warn-box">Marginal design. Critical mode: ${r.criticalItem.label} with MoS=${fmt(r.minMoS,3)}. Consider design improvements.</div>`+html;
+  else html=`<div class="highlight">Joint passes all failure modes. Minimum MoS=${fmt(r.minMoS,3)} on ${r.criticalItem.label}.</div>`+html;
+  return `<p>${html}</p>`;
+}
+
+function extractRecommendations(r){
+  const recs=[];
+  const crit=r.criticalItem;
+  if(crit.label.includes('Bearing')){
+    recs.push({type:'highlight',text:`Bearing is critical — consider increasing plate thickness from ${fmt(plates[0].thickness,2)}mm to ${fmt(plates[0].thickness*1.25,2)}mm (25% increase) to improve bearing area.`});
+  }
+  if(crit.label.includes('Net Section')){
+    recs.push({type:'highlight',text:`Net section is critical — increase plate width. Current ratio w/d=${fmt(plates[0].width/r.d,2)}. Target ≥5.0 for adequate net section efficiency.`});
+  }
+  if(crit.label.includes('Shear-Out')){
+    const newEdge=r.edge*1.33;
+    recs.push({type:'highlight',text:`Shear-out is critical — increase edge distance from ${fmt(r.edge,2)}mm to ${fmt(newEdge,2)}mm (${fmt(newEdge/r.d,2)}D). This increases shear-out area by 33%.`});
+  }
+  if(crit.label.includes('Bolt')){
+    recs.push({type:'highlight',text:`Bolt is critically loaded — consider upsizing bolt diameter from ${fmt(r.d,2)}mm to ${fmt(r.d*1.25,2)}mm. Area scales with d², yielding ~56% capacity increase.`});
+  }
+  if(r.minMoS>0.5){
+    recs.push({type:'highlight',text:`Joint has generous margins (min MoS=${fmt(r.minMoS,3)}). Potential to reduce weight by optimizing plate thickness or bolt diameter.`});
+  }
+  if(recs.length===0){
+    recs.push({type:'highlight',text:`Current design is adequate. Monitor ${crit.label} as the margin controller for any future load increases.`});
+  }
+  return recs;
+}
+
+renderPlates();
+</script>
+</body>
+</html>
